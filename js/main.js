@@ -4,22 +4,15 @@ const regionsList = document.getElementById("select-regions");
 const departementsList = document.getElementById("select-departements");
 const submitBtn = document.getElementById("submit-selection");
 const table = document.getElementById("table");
-const userLocation = document.getElementById("user- location");
+const userLocation = document.getElementById("user-location");
 
 //Global variables
 let regions = [];
 let departements = [];
 let communes = [];
 let chosenDepartement = {};
+let map;
 
-//Geolocation of user
-navigator.geolocation.getCurrentPosition((position) => {
-  const { lat, lng } = {
-    lat: position.coords.latitude,
-    lng: position.coords.longitude,
-  };
-  findUserLocation(lat, lng);
-});
 //Functions
 const findUserLocation = (lat, long) => {
   fetch(
@@ -27,14 +20,16 @@ const findUserLocation = (lat, long) => {
   )
     .then((response) => response.json())
     .then(([response]) => {
+      table.innerHTML = "";
       const listHeaders = document.createElement("tr");
       const headerNames = document.createElement("th");
       const headerPopulation = document.createElement("th");
       listHeaders.appendChild(headerNames);
       listHeaders.appendChild(headerPopulation);
-      headerNames.append(`Communes du département: ${departementsList.value}`);
+      headerNames.append(`Commune: ${response.nom}`);
       headerPopulation.append(`Habitants`);
       table.appendChild(listHeaders);
+
       const listItem = document.createElement("tr");
       const name = document.createElement("td");
       const population = document.createElement("td");
@@ -45,7 +40,24 @@ const findUserLocation = (lat, long) => {
       table.appendChild(listItem);
     });
 };
-//Get Regions from api
+
+//Geolocation of user
+navigator.geolocation.getCurrentPosition((position) => {
+  const { lat, lng } = {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude,
+  };
+  map = L.map("map").setView([lat, lng], 13);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  findUserLocation(lat, lng);
+});
+
+//Get Regions from API
 const fetchRegions = () => {
   fetch(url + "/regions")
     .then((response) => response.json())
@@ -57,16 +69,16 @@ const fetchRegions = () => {
         regionsList.appendChild(option);
       });
       const region = findSelectedRegion(regionsList.value);
-      fetchDepartments(region.code);
+      if (region) fetchDepartments(region.code);
     });
 };
+
 //Search and return current region selected from regions array
 const findSelectedRegion = (value) => {
-  return regions.find((region) => {
-    return region.nom === value;
-  });
+  return regions.find((region) => region.nom === value);
 };
-//Fetch and display departements from api
+
+//Fetch and display departements from API
 const fetchDepartments = (code) => {
   fetch(`${url}/regions/${code}/departements`)
     .then((response) => response.json())
@@ -80,13 +92,13 @@ const fetchDepartments = (code) => {
       });
     });
 };
+
 //Search and return current departement selected from departements array
 const findSelectedDepartement = (value) => {
-  return departements.find((departement) => {
-    return departement.nom === value;
-  });
+  return departements.find((departement) => departement.nom === value);
 };
-//Fetch and display communes from api
+
+//Fetch and display communes from API
 const findCommunes = (code) => {
   fetch(`${url}/departements/${code}/communes`)
     .then((response) => response.json())
@@ -101,7 +113,6 @@ const findCommunes = (code) => {
       headerNames.append(`Communes du département: ${departementsList.value}`);
       headerPopulation.append(`Habitants`);
       table.appendChild(listHeaders);
-
       response.forEach((commune) => {
         const listItem = document.createElement("tr");
         const name = document.createElement("td");
@@ -118,14 +129,16 @@ const findCommunes = (code) => {
 //Events
 regionsList.addEventListener("change", (e) => {
   const region = findSelectedRegion(e.target.value);
-  fetchDepartments(region.code);
+  if (region) fetchDepartments(region.code);
 });
+
 departementsList.addEventListener("change", (e) => {
   chosenDepartement = findSelectedDepartement(e.target.value);
 });
+
 submitBtn.addEventListener("click", () => {
   const departement = findSelectedDepartement(departementsList.value);
-  findCommunes(departement.code);
+  if (departement) findCommunes(departement.code);
 });
 
 //Initial fetch
