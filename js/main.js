@@ -21,6 +21,13 @@ const findUserLocation = (lat, long) => {
     .then((response) => response.json())
     .then(([response]) => {
       table.innerHTML = "";
+
+      const reversedArrays = response.contour.coordinates[0].map(
+        (innerArray) => {
+          return [...innerArray].reverse();
+        }
+      );
+      L.polygon(reversedArrays).addTo(map);
       const listHeaders = document.createElement("tr");
       const headerNames = document.createElement("th");
       const headerPopulation = document.createElement("th");
